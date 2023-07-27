@@ -1,0 +1,541 @@
+---
+title: "Shark Tank"
+author: "Michael Cao"
+date: "2023-04-04"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Summary of NA entries in each column (original data)
+```{r}
+dat <- read.csv("Shark Tank US dataset.csv")
+dat.copy <- dat
+dim(dat)
+colSums(is.na(dat))
+```
+
+
+
+Inspect each column
+```{r}
+table(dat$Season.Number) #good
+table(dat$Episode.Number) #good
+table(dat$Season.Start) #good
+which(dat$Startup.Name=='') #good
+table(dat$Industry) #good
+sum(dat$Business.Description=='') #good
+sum(dat$Entrepreneur.Names=='') # missing names - but okay
+table(dat$Original.Ask.Amount) #good
+table(dat$Original.Offered.Equity) #good
+table(dat$Valuation.Requested) #good
+table(dat$Got.Deal) #good
+
+
+table(dat$Season.End) #need to fix
+sum(dat$Original.Air.Date == '') #need to fix
+table(dat$Pitchers.Gender) #need to fix
+sum(dat$Pitchers.City=='') #599 missing cities - hard to fix
+sum(dat$Pitchers.State=='') #358 missing states - hard to fix
+table(dat$Pitchers.Average.Age) #984 missing ages - to be removed
+table(dat$Company.Website=='') #inaccurate column - to be removed
+sum(is.na(dat$Multiple.Entrepreneurs)) #need to convert the 478 NAs
+sum(is.na(dat$US.Viewership)) #useless column - to be removed
+
+
+# take special note of the following columns (loan/royalty deals)
+range(dat$Total.Deal.Amount, na.rm=T) #convert NA to 0 or not??
+which(dat$Total.Deal.Amount==0) #need to fix row 641
+range(dat$Total.Deal.Equity, na.rm=T)
+which(dat$Total.Deal.Equity==0) 
+range(dat$Deal.Valuation, na.rm=T)
+which(dat$Deal.Valuation==0)
+range(dat$Investment.Amount.Per.Shark, na.rm=T)
+which(dat$Investment.Amount.Per.Shark==0) #row 641 again
+table(dat$Royalty.Deal) #convert all NAs to 0
+table(dat$Loan) #need to fix
+
+
+#lastly, we need to fix/ fill NAs for the individual shark columns
+sum(is.na(dat$Barbara.Corcoran.Present))
+table(dat$Barbara.Corcoran.Present)
+table(dat$Barbara.Corcoran.Investment.Amount)
+table(dat$Barbara.Corcoran.Investment.Equity)
+```
+
+
+
+Remove Pitchers.Average.Age, Company.Website, US.Viewership columns
+```{r}
+dim(dat)
+dat <- dat[, !names(dat) %in% 
+             c("Pitchers.Average.Age", "Company.Website", "US.Viewership")]
+dim(dat)
+```
+
+
+
+Fill in missing season dates and reformatting
+```{r}
+table(dat$Season.Start)
+dat$Season.Start <- format(as.Date(dat$Season.Start, format = '%d-%b-%y'), '%m/%d/%Y')
+table(dat$Season.Start)
+
+table(dat$Season.End)
+which(dat$Season.End=='')
+dat$Season.End[which(dat$Season.End=='')] <- '20-Apr-23'
+dat$Season.End <- format(as.Date(dat$Season.End, format = '%d-%b-%y'), '%m/%d/%Y')
+table(dat$Season.End)
+```
+
+
+
+Fix the episode air date column (Manually)
+```{r}
+sum(dat$Original.Air.Date == '')
+
+rows_with_na <- which(dat$Original.Air.Date=='')
+eps_with_na <- unique(dat[rows_with_na, c('Season.Number', 'Episode.Number')])
+eps_with_na
+
+dat[dat$Season.Number==9 & dat$Episode.Number==17, 'Original.Air.Date'] <- '14-Jan-18'
+dat[dat$Season.Number==9 & dat$Episode.Number==18, 'Original.Air.Date'] <- '21-Jan-18'
+dat[dat$Season.Number==9 & dat$Episode.Number==19, 'Original.Air.Date'] <- '28-Jan-18'
+dat[dat$Season.Number==9 & dat$Episode.Number==20, 'Original.Air.Date'] <- '28-Jan-18'
+dat[dat$Season.Number==9 & dat$Episode.Number==21, 'Original.Air.Date'] <- '11-Feb-18'
+dat[dat$Season.Number==9 & dat$Episode.Number==22, 'Original.Air.Date'] <- '18-Feb-18'
+dat[dat$Season.Number==9 & dat$Episode.Number==23, 'Original.Air.Date'] <- '25-Feb-18'
+
+dat[dat$Season.Number==10 & dat$Episode.Number==2, 'Original.Air.Date'] <- '14-Oct-18'
+dat[dat$Season.Number==10 & dat$Episode.Number==3, 'Original.Air.Date'] <- '21-Oct-18'
+dat[dat$Season.Number==10 & dat$Episode.Number==4, 'Original.Air.Date'] <- '28-Oct-18'
+dat[dat$Season.Number==10 & dat$Episode.Number==5, 'Original.Air.Date'] <- '18-Nov-18'
+dat[dat$Season.Number==10 & dat$Episode.Number==6, 'Original.Air.Date'] <- '25-Nov-18'
+dat[dat$Season.Number==10 & dat$Episode.Number==7, 'Original.Air.Date'] <- '02-Dec-18'
+dat[dat$Season.Number==10 & dat$Episode.Number==9, 'Original.Air.Date'] <- '06-Jan-19'
+dat[dat$Season.Number==10 & dat$Episode.Number==12, 'Original.Air.Date'] <- '27-Jan-19'
+dat[dat$Season.Number==10 & dat$Episode.Number==13, 'Original.Air.Date'] <- '27-Jan-19'
+dat[dat$Season.Number==10 & dat$Episode.Number==14, 'Original.Air.Date'] <- '03-Mar-19'
+dat[dat$Season.Number==10 & dat$Episode.Number==15, 'Original.Air.Date'] <- '10-Mar-19'
+dat[dat$Season.Number==10 & dat$Episode.Number==16, 'Original.Air.Date'] <- '17-Mar-19'
+dat[dat$Season.Number==10 & dat$Episode.Number==17, 'Original.Air.Date'] <- '24-Mar-19'
+dat[dat$Season.Number==10 & dat$Episode.Number==18, 'Original.Air.Date'] <- '07-Apr-19'
+dat[dat$Season.Number==10 & dat$Episode.Number==19, 'Original.Air.Date'] <- '14-Apr-19'
+dat[dat$Season.Number==10 & dat$Episode.Number==20, 'Original.Air.Date'] <- '21-Apr-19'
+dat[dat$Season.Number==10 & dat$Episode.Number==21, 'Original.Air.Date'] <- '28-Apr-19'
+dat[dat$Season.Number==10 & dat$Episode.Number==22, 'Original.Air.Date'] <- '05-May-19'
+
+dat[dat$Season.Number==11 & dat$Episode.Number==2, 'Original.Air.Date'] <- '06-Oct-19'
+dat[dat$Season.Number==11 & dat$Episode.Number==4, 'Original.Air.Date'] <- '20-Oct-19'
+dat[dat$Season.Number==11 & dat$Episode.Number==5, 'Original.Air.Date'] <- '27-Oct-19'
+dat[dat$Season.Number==11 & dat$Episode.Number==6, 'Original.Air.Date'] <- '03-Nov-19'
+dat[dat$Season.Number==11 & dat$Episode.Number==7, 'Original.Air.Date'] <- '10-Nov-19'
+dat[dat$Season.Number==11 & dat$Episode.Number==8, 'Original.Air.Date'] <- '17-Nov-19'
+dat[dat$Season.Number==11 & dat$Episode.Number==9, 'Original.Air.Date'] <- '01-Dec-19'
+dat[dat$Season.Number==11 & dat$Episode.Number==10, 'Original.Air.Date'] <- '05-Jan-20'
+dat[dat$Season.Number==11 & dat$Episode.Number==11, 'Original.Air.Date'] <- '12-Jan-20'
+dat[dat$Season.Number==11 & dat$Episode.Number==12, 'Original.Air.Date'] <- '19-Jan-20'
+dat[dat$Season.Number==11 & dat$Episode.Number==13, 'Original.Air.Date'] <- '28-Feb-20'
+dat[dat$Season.Number==11 & dat$Episode.Number==14, 'Original.Air.Date'] <- '06-Mar-20'
+dat[dat$Season.Number==11 & dat$Episode.Number==15, 'Original.Air.Date'] <- '13-Mar-20'
+dat[dat$Season.Number==11 & dat$Episode.Number==16, 'Original.Air.Date'] <- '20-Mar-20'
+dat[dat$Season.Number==11 & dat$Episode.Number==17, 'Original.Air.Date'] <- '27-Mar-20'
+dat[dat$Season.Number==11 & dat$Episode.Number==18, 'Original.Air.Date'] <- '03-Apr-20'
+dat[dat$Season.Number==11 & dat$Episode.Number==19, 'Original.Air.Date'] <- '10-Apr-20'
+dat[dat$Season.Number==11 & dat$Episode.Number==21, 'Original.Air.Date'] <- '06-May-20'
+dat[dat$Season.Number==11 & dat$Episode.Number==22, 'Original.Air.Date'] <- '08-May-20'
+dat[dat$Season.Number==11 & dat$Episode.Number==23, 'Original.Air.Date'] <- '13-May-20'
+
+dat[dat$Season.Number==14 & dat$Episode.Number==4, 'Original.Air.Date'] <- '14-Oct-22'
+dat[dat$Season.Number==14 & dat$Episode.Number==5, 'Original.Air.Date'] <- '21-Oct-22'
+dat[dat$Season.Number==14 & dat$Episode.Number==6, 'Original.Air.Date'] <- '11-Nov-22'
+dat[dat$Season.Number==14 & dat$Episode.Number==7, 'Original.Air.Date'] <- '18-Nov-22'
+
+dat$Original.Air.Date <- format(as.Date(dat$Original.Air.Date, 
+                                        format = '%d-%b-%y'), '%m/%d/%Y')
+sum(dat$Original.Air.Date == '')
+```
+
+
+
+Fix the Gender column
+```{r}
+table(dat$Pitchers.Gender)
+rows <- which(dat$Pitchers.Gender=='')
+dat[rows, 'Entrepreneur.Names']
+dat$Pitchers.Gender[rows] <- c('Male', 'Male', 'Male', 'Mixed Team', 'Male', 'Male')
+dat$Pitchers.Gender[dat$Pitchers.Gender=='Mixed Team'] <- 'Mixed'
+table(dat$Pitchers.Gender)
+```
+
+
+
+Re-numbering Pitch.Number
+```{r}
+range(dat$Pitch.Number)
+tail(dat$Pitch.Number)
+which(!(1:1097 %in% dat$Pitch.Number))
+dat$Pitch.Number <- 1:1097
+```
+
+
+
+Convert NAs in Multiple.Entrepreneurs
+```{r}
+sum(is.na(dat$Multiple.Entrepreneurs))
+table(dat$Multiple.Entrepreneurs)
+dat$Multiple.Entrepreneurs[is.na(dat$Multiple.Entrepreneurs)] <- 0
+table(dat$Multiple.Entrepreneurs)
+```
+
+
+
+Convert NAs in Number.of.sharks.in.deal
+```{r}
+sum(is.na(dat$Number.of.sharks.in.deal))
+table(dat$Number.of.sharks.in.deal)
+dat$Number.of.sharks.in.deal[is.na(dat$Number.of.sharks.in.deal)] <- 0
+table(dat$Number.of.sharks.in.deal)
+```
+
+
+
+Fix the Deal columns (to be discussed? should we convert NAs?)
+*Row 641: got $50000 loan deal with no amount/equity involved. Should we remove it?*
+*Others: loan/royalty-only deal with no equity involved. How to handle?*
+```{r}
+table(dat$Total.Deal.Amount)
+which(dat$Total.Deal.Amount==0) # got a deal, but total amount is 0
+dat$Total.Deal.Amount[is.na(dat$Total.Deal.Amount)] <- 0
+table(dat$Total.Deal.Amount)
+
+table(dat$Total.Deal.Equity)
+which(dat$Total.Deal.Equity==0) # got a deal, but total equity is 0
+dat$Total.Deal.Equity[is.na(dat$Total.Deal.Equity)] <- 0
+table(dat$Total.Deal.Equity)
+
+table(dat$Deal.Valuation)
+which(dat$Deal.Valuation==0) # got a deal, but deal valuation is 0
+dat$Deal.Valuation[is.na(dat$Deal.Valuation)] <- 0
+table(dat$Deal.Valuation)
+
+table(dat$Investment.Amount.Per.Shark)
+which(dat$Investment.Amount.Per.Shark==0) #row 641 again
+dat$Investment.Amount.Per.Shark[is.na(dat$Investment.Amount.Per.Shark)] <- 0
+table(dat$Investment.Amount.Per.Shark)
+
+table(dat$Equity.Per.Shark)
+which(dat$Equity.Per.Shark==0) #same situation
+dat$Equity.Per.Shark[is.na(dat$Equity.Per.Shark)] <- 0
+table(dat$Equity.Per.Shark)
+```
+
+
+
+Convert NAs in Royalty.Deal 
+```{r}
+sum(is.na(dat$Royalty.Deal))
+table(dat$Royalty.Deal)
+dat$Royalty.Deal[is.na(dat$Royalty.Deal)] <- 0
+table(dat$Royalty.Deal)
+```
+
+
+
+Fix the Loan column (to be discussed?)
+*Some orginially has the amount, most do not*
+```{r}
+sum(is.na(dat$Loan))
+table(dat$Loan)
+dat$Loan[is.na(dat$Loan)] <- 0
+dat$Loan[dat$Loan!=0] <- 1
+table(dat$Loan)
+```
+
+
+
+Update missing Shark Attendance (Manually) 
+*It is worth noting that this dataset is missing many episodes*
+```{r}
+cols <- grep("Present$", colnames(dat))
+rows_with_na <- which(apply(dat[,cols], 1, function(x) any(is.na(x))))
+eps_with_na <- unique(dat[rows_with_na, c('Season.Number', 'Episode.Number')])
+eps_with_na 
+
+# [1] "Barbara.Corcoran.Present"
+# [2] "Mark.Cuban.Present"      
+# [3] "Lori.Greiner.Present"    
+# [4] "Robert.Herjavec.Present" 
+# [5] "Daymond.John.Present"    
+# [6] "Kevin.O.Leary.Present"  
+
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==1, cols] <- matrix(c(0,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==2, cols] <- matrix(c(1,1,1,0,0,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==3, cols] <- matrix(c(0,1,1,1,1,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==4, cols] <- matrix(c(1,1,1,0,0,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==5, cols] <- matrix(c(0,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==6, cols] <- matrix(c(0,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==7, cols] <- matrix(c(0,1,1,1,1,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==8, cols] <- matrix(c(0,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==9, cols] <- matrix(c(1,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==10, cols] <- matrix(c(1,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==11, cols] <- matrix(c(1,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==12, cols] <- matrix(c(1,1,1,0,0,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==13, cols] <- matrix(c(0,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==14, cols] <- matrix(c(0,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==15, cols] <- matrix(c(1,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==16, cols] <- matrix(c(1,1,1,0,0,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==17, cols] <- matrix(c(1,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==18, cols] <- matrix(c(0,1,1,1,1,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==19, cols] <- matrix(c(0,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==20, cols] <- matrix(c(1,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==21, cols] <- matrix(c(0,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==22, cols] <- matrix(c(0,1,1,1,1,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==23, cols] <- matrix(c(1,1,1,0,0,1),4,6,byrow=T)
+dat[dat$Season.Number==11 & 
+      dat$Episode.Number==24, cols] <- matrix(c(0,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==12 & 
+      dat$Episode.Number==1, cols] <- matrix(c(0,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==12 & 
+      dat$Episode.Number==2, cols] <- matrix(c(1,1,1,0,0,1),4,6,byrow=T)
+dat[dat$Season.Number==12 & 
+      dat$Episode.Number==3, cols] <- matrix(c(0,1,1,1,1,1),4,6,byrow=T)
+dat[dat$Season.Number==12 & 
+      dat$Episode.Number==4, cols] <- matrix(c(1,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==12 & 
+      dat$Episode.Number==5, cols] <- matrix(c(0,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==12 & 
+      dat$Episode.Number==6, cols] <- matrix(c(0,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==12 & 
+      dat$Episode.Number==7, cols] <- matrix(c(1,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==12 & 
+      dat$Episode.Number==8, cols] <- matrix(c(1,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==12 & 
+      dat$Episode.Number==9, cols] <- matrix(c(1,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==12 & 
+      dat$Episode.Number==10, cols] <- matrix(c(1,1,1,0,0,1),4,6,byrow=T)
+dat[dat$Season.Number==13 & 
+      dat$Episode.Number==1, cols] <- matrix(c(1,1,1,0,0,1),4,6,byrow=T)
+dat[dat$Season.Number==13 & 
+      dat$Episode.Number==2, cols] <- matrix(c(0,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==13 & 
+      dat$Episode.Number==3, cols] <- matrix(c(1,1,1,0,0,1),4,6,byrow=T)
+dat[dat$Season.Number==13 & 
+      dat$Episode.Number==4, cols] <- matrix(c(0,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==13 & 
+      dat$Episode.Number==5, cols] <- matrix(c(0,1,1,1,1,1),4,6,byrow=T)
+dat[dat$Season.Number==13 & 
+      dat$Episode.Number==6, cols] <- matrix(c(0,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==13 & 
+      dat$Episode.Number==7, cols] <- matrix(c(1,1,1,0,0,1),4,6,byrow=T)
+dat[dat$Season.Number==13 & 
+      dat$Episode.Number==8, cols] <- matrix(c(1,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==13 & 
+      dat$Episode.Number==9, cols] <- matrix(c(0,1,1,1,1,1),4,6,byrow=T)
+dat[dat$Season.Number==13 & 
+      dat$Episode.Number==10, cols] <- matrix(c(1,1,1,0,0,1),4,6,byrow=T)
+dat[dat$Season.Number==14 & 
+      dat$Episode.Number==1, cols] <- matrix(c(1,1,1,1,1,1),4,6,byrow=T)
+dat[dat$Season.Number==14 & 
+      dat$Episode.Number==2, cols] <- matrix(c(1,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==14 & 
+      dat$Episode.Number==3, cols] <- matrix(c(0,1,1,0,1,1),3,6,byrow=T)
+dat[dat$Season.Number==14 & 
+      dat$Episode.Number==4, cols] <- matrix(c(0,1,1,1,1,1),4,6,byrow=T)
+dat[dat$Season.Number==14 & 
+      dat$Episode.Number==5, cols] <- matrix(c(0,1,1,1,0,1),4,6,byrow=T)
+dat[dat$Season.Number==14 & 
+      dat$Episode.Number==6, cols] <- matrix(c(0,1,1,0,1,1),4,6,byrow=T)
+dat[dat$Season.Number==14 & 
+      dat$Episode.Number==7, cols] <- matrix(c(1,1,1,1,0,1),3,6,byrow=T)
+
+sum(is.na(dat[,cols]))
+table(dat$Barbara.Corcoran.Present)
+table(dat$Mark.Cuban.Present)
+table(dat$Lori.Greiner.Present)
+table(dat$Robert.Herjavec.Present)
+table(dat$Daymond.John.Present)
+table(dat$Kevin.O.Leary.Present)
+```
+
+
+
+Convert NAs in Investment Amount/Equity columns to 0
+```{r}
+cols <- grep("(Investment.Amount|Investment.Equity)$", colnames(dat))
+colSums(is.na(dat[, cols])) 
+
+for (i in cols)
+{
+  dat[is.na(dat[, i]), i] <- 0
+}
+
+colSums(is.na(dat[, cols]))
+```
+
+
+
+If we want to fill in city/state info, we can do it manually...
+```{r}
+sum(dat$Pitchers.City=='') #599 missing cities - need to fix manually
+sum(dat$Pitchers.State=='') #358 missing states - need to fix manually
+```
+
+No NAs in the processed data
+```{r}
+colSums(is.na(dat))
+```
+
+
+
+Convert the processed dataframe to csv format
+```{r}
+if (!dir.exists("data")) 
+{
+  dir.create("data")
+}
+
+# raw data
+write.csv(dat.copy, "data/Shark Tank Original.csv", row.names = FALSE)
+
+# processed data
+write.csv(dat, "data/Shark Tank Processed.csv", row.names = FALSE)
+
+# separated by shark presence
+kevin <- dat[dat$Kevin.O.Leary.Present==1,]
+barbara <- dat[dat$Barbara.Corcoran.Present==1,]
+mark <- dat[dat$Mark.Cuban.Present==1,]
+daymond <- dat[dat$Daymond.John.Present==1,]
+lori <- dat[dat$Lori.Greiner.Present==1,]
+robert <- dat[dat$Robert.Herjavec.Present==1,]
+
+write.csv(kevin, "data/Kevin.csv", row.names = FALSE)
+write.csv(barbara, "data/Barbara.csv", row.names = FALSE)
+write.csv(mark, "data/Mark.csv", row.names = FALSE)
+write.csv(daymond, "data/Daymond.csv", row.names = FALSE)
+write.csv(lori, "data/Lori.csv", row.names = FALSE)
+write.csv(robert, "data/Robert.csv", row.names = FALSE)
+```
+
+
+
+Visualization 1: Median investment amount by shark
+```{r}
+colors <- c("#4C97DB", "#2CC6A0", "#F4D03F", "#B67BDC", "#F7931E", "#FF616D")
+plot(aggregate(kevin[kevin$Kevin.O.Leary.Investment.Amount>0,]$Kevin.O.Leary.Investment.Amount ~ kevin[kevin$Kevin.O.Leary.Investment.Amount>0,]$Season.Number, kevin[kevin$Kevin.O.Leary.Investment.Amount>0,], median), type='o', pch=19, lwd=2, ylim=c(0, 300000), cex.lab=0.8, axes=F, col = colors[1], xlab='', ylab='')
+lines(aggregate(barbara[barbara$Barbara.Corcoran.Investment.Amount>0,]$Barbara.Corcoran.Investment.Amount ~ barbara[barbara$Barbara.Corcoran.Investment.Amount>0,]$Season.Number, barbara[barbara$Barbara.Corcoran.Investment.Amount>0,], median), type='o', pch=19, lwd=2, col = colors[2])
+lines(aggregate(robert[robert$Robert.Herjavec.Investment.Amount>0,]$Robert.Herjavec.Investment.Amount ~ robert[robert$Robert.Herjavec.Investment.Amount>0,]$Season.Number, robert[robert$Robert.Herjavec.Investment.Amount>0,], median), type='o', pch=19, lwd=2, col = colors[3])
+lines(aggregate(lori[lori$Lori.Greiner.Investment.Amount>0,]$Lori.Greiner.Investment.Amount ~ lori[lori$Lori.Greiner.Investment.Amount>0,]$Season.Number, lori[lori$Lori.Greiner.Investment.Amount>0,], median), type='o', pch=19, lwd=2, col = colors[4])
+lines(aggregate(daymond[daymond$Daymond.John.Investment.Amount>0,]$Daymond.John.Investment.Amount ~ daymond[daymond$Daymond.John.Investment.Amount>0,]$Season.Number, daymond[daymond$Daymond.John.Investment.Amount>0,], median), type='o', pch=19, lwd=2, col = colors[5])
+lines(aggregate(mark[mark$Mark.Cuban.Investment.Amount>0,]$Mark.Cuban.Investment.Amount ~ mark[mark$Mark.Cuban.Investment.Amount>0,]$Season.Number, mark[mark$Mark.Cuban.Investment.Amount>0,], median), type='o', pch=19, lwd=2, col = colors[6])
+axis(side = 1, at = 1:14, cex.axis = 0.6, tcl= -0.2, mgp= c(0,0.2,0))
+axis(side = 2, at = seq(0, 300000, 25000), cex.axis = 0.6, mgp= c(0,0.5,0), las=2, tcl= -0.2)
+mtext('Median Investment Amount ($)', side = 2, line=2.5, cex=0.7, font=14)
+mtext("Season", side = 1, line = 1.2, cex=0.7, font=14)
+legend("topleft", legend = c('Kevin', 'Barbara', 'Robert', 'Lori', 'Daymond', 'Mark'), col = colors, lty = 1, lwd = 2, cex=.5, inset = c(0.02, 0))
+```
+
+
+Visualization 2: Median investment equity by shark
+```{r}
+colors <- c("#4C97DB", "#2CC6A0", "#F4D03F", "#B67BDC", "#F7931E", "#FF616D")
+plot(aggregate(kevin[kevin$Kevin.O.Leary.Investment.Amount>0,]$Kevin.O.Leary.Investment.Equity ~ kevin[kevin$Kevin.O.Leary.Investment.Amount>0,]$Season.Number, kevin[kevin$Kevin.O.Leary.Investment.Amount>0,], median), type='o', pch=19, lwd=2, xlab='', ylab='', ylim=c(0, 40), cex.lab=0.8, axes=F, col= colors[1])
+lines(aggregate(barbara[barbara$Barbara.Corcoran.Investment.Amount>0,]$Barbara.Corcoran.Investment.Equity ~ barbara[barbara$Barbara.Corcoran.Investment.Amount>0,]$Season.Number, barbara[barbara$Barbara.Corcoran.Investment.Amount>0,], median), type='o', pch=19, lwd=2, col=colors[2])
+lines(aggregate(robert[robert$Robert.Herjavec.Investment.Amount>0,]$Robert.Herjavec.Investment.Equity ~ robert[robert$Robert.Herjavec.Investment.Amount>0,]$Season.Number, robert[robert$Robert.Herjavec.Investment.Amount>0,], median), type='o', pch=19, lwd=2, col=colors[3])
+lines(aggregate(lori[lori$Lori.Greiner.Investment.Amount>0,]$Lori.Greiner.Investment.Equity ~ lori[lori$Lori.Greiner.Investment.Amount>0,]$Season.Number, lori[lori$Lori.Greiner.Investment.Amount>0,], median), type='o', pch=19, lwd=2, col=colors[4])
+lines(aggregate(daymond[daymond$Daymond.John.Investment.Amount>0,]$Daymond.John.Investment.Equity ~ daymond[daymond$Daymond.John.Investment.Amount>0,]$Season.Number, daymond[daymond$Daymond.John.Investment.Amount>0,], median), type='o', pch=19, lwd=2, col=colors[5])
+lines(aggregate(mark[mark$Mark.Cuban.Investment.Amount>0,]$Mark.Cuban.Investment.Equity ~ mark[mark$Mark.Cuban.Investment.Amount>0,]$Season.Number, mark[mark$Mark.Cuban.Investment.Amount>0,], median), type='o', pch=19, lwd=2, col=colors[6])
+
+axis(side = 1, at = 1:14, cex.axis = 0.6, tcl= -0.2, mgp= c(0,0.2,0))
+axis(side = 2, at = seq(0, 40, 5), cex.axis = 0.6, las=2, tcl= -0.2, mgp= c(0,0.5,0))
+mtext('Median Investment Equity (%)', side = 2, line=1.5, cex=0.7, font=14)
+mtext("Season", side = 1, line = 1.2, cex=0.7, font=14)
+legend("topright", legend = c('Kevin', 'Barbara', 'Robert', 'Lori', 'Daymond', 'Mark'), col = colors, lty = 1, lwd = 2, cex=.5, inset = c(0.03, 0))
+```
+
+
+
+Visualization 3: Shark's Willingness to make a deal
+```{r}
+colors <- c("#4C97DB", "#2CC6A0", "#F4D03F", "#B67BDC", "#F7931E", "#FF616D")
+pitch_per_season <- tapply(dat$Season.Number, dat$Season.Number, FUN = length)/100
+
+plot(tapply(kevin[kevin$Kevin.O.Leary.Investment.Amount>0,]$Kevin.O.Leary.Investment.Amount, kevin[kevin$Kevin.O.Leary.Investment.Amount>0,]$Season.Number, FUN = length)/pitch_per_season, type='o', pch=19, lwd=2, xlab='', ylab='', ylim=c(0, 30), cex.lab=0.8, axes=F, col=colors[1])
+lines(tapply(barbara[barbara$Barbara.Corcoran.Investment.Amount>0,]$Barbara.Corcoran.Investment.Amount, barbara[barbara$Barbara.Corcoran.Investment.Amount>0,]$Season.Number, FUN = length)/pitch_per_season, type='o', pch=19, lwd=2, col=colors[2])
+lines(tapply(robert[robert$Robert.Herjavec.Investment.Amount>0,]$Robert.Herjavec.Investment.Amount, robert[robert$Robert.Herjavec.Investment.Amount>0,]$Season.Number, FUN = length)/pitch_per_season, type='o', pch=19, lwd=2, col=colors[3])
+lines(c(NA, NA, tapply(lori[lori$Lori.Greiner.Investment.Amount>0,]$Lori.Greiner.Investment.Amount, lori[lori$Lori.Greiner.Investment.Amount>0,]$Season.Number, FUN = length))/pitch_per_season, type='o', pch=19, lwd=2, col=colors[4])
+lines(tapply(daymond[daymond$Daymond.John.Investment.Amount>0,]$Daymond.John.Investment.Amount, daymond[daymond$Daymond.John.Investment.Amount>0,]$Season.Number, FUN = length)/pitch_per_season, type='o', pch=19, lwd=2, col=colors[5])
+lines(c(NA,tapply(mark[mark$Mark.Cuban.Investment.Amount>0,]$Mark.Cuban.Investment.Amount, mark[mark$Mark.Cuban.Investment.Amount>0,]$Season.Number, FUN = length))/pitch_per_season, type='o', pch=19, lwd=2, col=colors[6])
+axis(side = 1, at = 1:14, cex.axis = 0.6, tcl= -0.2, mgp= c(0,0.2,0))
+axis(side = 2, at = seq(0, 30, 2), cex.axis = 0.6, las=2, tcl= -0.2, mgp= c(0,0.5,0))
+mtext('Deal per Pitch (%)', side = 2, line=1.5, cex=0.7, font=14)
+mtext("Season", side = 1, line = 1.2, cex=0.7, font=14)
+legend("topleft", legend = c('Kevin', 'Barbara', 'Robert', 'Lori', 'Daymond', 'Mark'), col = colors, lty = 1, lwd = 2, cex=.5, inset = c(0.02, 0))
+```
+
+
+
+Visualization 4: barplot of median investment, equity, and deal per pitch by shark
+```{r}
+par(mar=c(5, 4, 4, 5)+.1)
+
+colors <- c("#FFA600", "#7FDBFF", "#2ECC40", "#F012BE", "#FFDC00", "#FF4136")
+
+median_investment <- c(median(kevin$Kevin.O.Leary.Investment.Amount[kevin$Kevin.O.Leary.Investment.Amount>0]), median(barbara$Barbara.Corcoran.Investment.Amount[barbara$Barbara.Corcoran.Investment.Amount>0]), median(robert$Robert.Herjavec.Investment.Amount[robert$Robert.Herjavec.Investment.Amount>0]), median(lori$Lori.Greiner.Investment.Amount[lori$Lori.Greiner.Investment.Amount>0]), median(daymond$Daymond.John.Investment.Amount[daymond$Daymond.John.Investment.Amount>0]),median(mark$Mark.Cuban.Investment.Amount[mark$Mark.Cuban.Investment.Amount>0]))
+
+median_equity <- c(median(kevin$Kevin.O.Leary.Investment.Equity[kevin$Kevin.O.Leary.Investment.Equity>0]), median(barbara$Barbara.Corcoran.Investment.Equity[barbara$Barbara.Corcoran.Investment.Equity>0]), median(robert$Robert.Herjavec.Investment.Equity[robert$Robert.Herjavec.Investment.Equity>0]), median(lori$Lori.Greiner.Investment.Equity[lori$Lori.Greiner.Investment.Equity>0]), median(daymond$Daymond.John.Investment.Equity[daymond$Daymond.John.Investment.Equity>0]),median(mark$Mark.Cuban.Investment.Equity[mark$Mark.Cuban.Investment.Equity>0]))
+
+deal_percent <- c(mean(kevin$Kevin.O.Leary.Investment.Amount>0),
+                  mean(barbara$Barbara.Corcoran.Investment.Amount>0),
+                  mean(robert$Robert.Herjavec.Investment.Amount>0),
+                  mean(lori$Lori.Greiner.Investment.Amount>0),
+                  mean(daymond$Daymond.John.Investment.Amount>0),
+                  mean(mark$Mark.Cuban.Investment.Amount>0))
+
+bp <- barplot(
+  height = cbind(median_investment/10000, median_equity*1, deal_percent*100),
+  beside = TRUE, ylim = c(0,27), cex.names=.7, font=14,
+  col = colors, axes = F)
+
+axis(side = 2, at = seq(0, 27, 5), cex.axis = 0.6, las=2, tcl= -0.2, mgp= c(0,0.5,0))
+axis(side = 4, at = seq(0, 27, 2.5), cex.axis = 0.6, las=2, tcl= -0.2, mgp= c(0,0.5,0))
+abline(h=0)
+mtext('Amount (10^4 USD)', side = 2, line=1.2, cex=0.6, font=14)
+mtext('Percentage (%)', side = 4, line=1.5, cex=0.6, font=14)
+mtext(text = c("Median Investment (10^4 USD)", "Median Equity (%)", "Deal per Pitch (%)"), side = 1, line = 0.2, at = c(4, 11, 18), cex = 0.7, font=14)
+
+text(x = bp, y = cbind(median_investment/10000, median_equity, deal_percent*100)-.5, labels = round(cbind(median_investment/10000, median_equity, deal_percent*100),2), pos = 3, cex = .4, col = "black")
+
+legend("topleft", legend = c('Kevin', 'Barbara', 'Robert', 'Lori', 'Daymond', 'Mark'), fill = colors, cex=.5, inset = c(0.02, 0.03))
+
+# par.default()
+```

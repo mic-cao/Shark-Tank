@@ -1,3 +1,0 @@
-* linguist-language=Python
-*.md linguist-language=Markdown
-*.Rmd linguist-language=R

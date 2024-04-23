@@ -1,4 +1,4 @@
-### Shark Tank Investment Analysis
+# Shark Tank Investment Analysis
 
 **Authors:** Crystal Hu, Jacob Dentes, Michael Cao, Sanjana Kasetti
 
